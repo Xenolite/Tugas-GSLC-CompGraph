@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel-by-Pixel Image Manipulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+        }
+        select, button {
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #resultPage {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+   
+    <div class="container" id="uploadPage">
+        <h2>Upload and Transform Your Image</h2>
+        <input type="file" id="imageUpload" accept="image/*"><br>
+        <select id="filterOption">
+            <option value="grayscale">Grayscale</option>
+            <option value="blur">Blur</option>
+        </select>
+        <button onclick="processImage()">Apply Filter</button>
+    </div>
+
+    
+    <div class="container" id="resultPage">
+        <h2>Original and Transformed Image</h2>
+        <div>
+            <h3>Original Image</h3>
+            <canvas id="originalCanvas"></canvas>
+        </div>
+        <div>
+            <h3>Transformed Image</h3>
+            <canvas id="transformedCanvas"></canvas>
+        </div>
+        <button onclick="goBack()">Go Back</button>
+    </div>
+
+    <script>
+        function processImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const filterOption = document.getElementById('filterOption').value;
+            const originalCanvas = document.getElementById('originalCanvas');
+            const transformedCanvas = document.getElementById('transformedCanvas');
+            const originalContext = originalCanvas.getContext('2d');
+            const transformedContext = transformedCanvas.getContext('2d');
+            const uploadPage = document.getElementById('uploadPage');
+            const resultPage = document.getElementById('resultPage');
+
+            if (fileInput.files.length === 0) {
+                alert("Please upload an image!");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const img = new Image();
+                img.src = e.target.result;
+
+                img.onload = function () {
+                
+                    originalCanvas.width = img.width;
+                    originalCanvas.height = img.height;
+                    transformedCanvas.width = img.width;
+                    transformedCanvas.height = img.height;
+
+                   
+                    originalContext.drawImage(img, 0, 0);
+
+                    
+                    const imageData = originalContext.getImageData(0, 0, img.width, img.height);
+                    const data = imageData.data;
+
+                    
+                    if (filterOption === 'grayscale') {
+                        for (let i = 0; i < data.length; i += 4) {
+                            const red = data[i];
+                            const green = data[i + 1];
+                            const blue = data[i + 2];
+
+                            
+                            const gray = 0.3 * red + 0.59 * green + 0.11 * blue;
+
+                            
+                            data[i] = gray;       
+                            data[i + 1] = gray;   
+                            data[i + 2] = gray;   
+                        }
+                    } else if (filterOption === 'blur') {
+                        const blurRadius = 2; 
+                        const blurredData = new Uint8ClampedArray(data);
+
+                        for (let y = 0; y < img.height; y++) {
+                            for (let x = 0; x < img.width; x++) {
+                                let red = 0, green = 0, blue = 0, count = 0;
+
+                                for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                                    for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                                        const nx = x + dx;
+                                        const ny = y + dy;
+
+                                        if (nx >= 0 && nx < img.width && ny >= 0 && ny < img.height) {
+                                            const index = (ny * img.width + nx) * 4;
+                                            red += data[index];
+                                            green += data[index + 1];
+                                            blue += data[index + 2];
+                                            count++;
+                                        }
+                                    }
+                                }
+
+                                const i = (y * img.width + x) * 4;
+                                blurredData[i] = red / count;
+                                blurredData[i + 1] = green / count;
+                                blurredData[i + 2] = blue / count;
+                            }
+                        }
+
+                        
+                        for (let i = 0; i < data.length; i++) {
+                            data[i] = blurredData[i];
+                        }
+                    }
+
+                    
+                    transformedContext.putImageData(imageData, 0, 0);
+
+                    
+                    uploadPage.style.display = 'none';
+                    resultPage.style.display = 'block';
+                };
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function goBack() {
+            const uploadPage = document.getElementById('uploadPage');
+            const resultPage = document.getElementById('resultPage');
+
+            
+            uploadPage.style.display = 'block';
+            resultPage.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
